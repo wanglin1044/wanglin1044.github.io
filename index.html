@@ -1,25 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Welcome to nginx!</title>
-<style>
-    body {
-        width: 35em;
-        margin: 0 auto;
-        font-family: Tahoma, Verdana, Arial, sans-serif;
-    }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遥控器</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
-<h1>127001 80</h1>
-<p>If you see this page, the nginx web server is successfully installed and
-working. Further configuration is required.</p>
-
-<p>For online documentation and support please refer to
-<a href="http://nginx.org/">nginx.org</a>.<br/>
-Commercial support is available at
-<a href="http://nginx.com/">nginx.com</a>.</p>
-
-<p><em>Thank you for using nginx.</em></p>
+    <div class="title">未连接</div>
+    <div id="off" onclick="clickKey(26)">OFF</div>
+    <div id="ipbtn">输入盒子IP</div>
+    <div class="arrow-panel">
+        <div class="up" onclick="clickKey(19)">up</div>
+        <div class="down" onclick="clickKey(20)">down</div>
+        <div class="left" onclick="clickKey(21)">left</div>
+        <div class="right" onclick="clickKey(22)">right</div>
+        <div class="ok" onclick="clickKey(23)">ok</div>
+    </div>
+    <div class="menu-list">
+        <div class="back" onclick="clickKey(4)">back</div>
+        <div class="menu" onclick="clickKey(82)">menu</div>
+        <div class="lup" onclick="clickKey(24)">+</div>
+        <div class="home" onclick="clickKey(3)">home</div>
+        <div class="setting" onclick="clickKey('setting')">setting</div>
+        <div class="ldown" onclick="clickKey(25)">-</div>
+    </div>
+    <script>
+        if (navigator.serviceWorker != null) {
+            navigator.serviceWorker.register('sw.js').then(function(registartion) {
+                console.log('支持sw:', registartion.scope)
+            })
+        }
+        var $ = id => document.getElementById(id);
+        var $c = c => (document.getElementsByClassName(c))[0]
+        var heziIp = localStorage.getItem('ip')
+        if (heziIp) {
+            $c('title').innerHTML = heziIp
+        } else {
+            heziIp = ''
+        }
+        $('ipbtn').onclick = function() {
+            var msg = window.prompt('请输入盒子IP', '192.168.')
+            var re =  /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/
+            if (re.test(msg)) {
+                $c('title').innerHTML = heziIp = msg
+                localStorage.setItem('ip', msg)
+            } else {
+                alert('请输入正确的IP地址')
+            }
+        }
+        function clickKey(keycode) {
+            if (!heziIp) {
+                alert('请先输入盒子IP')
+                return
+            }
+            var url = 'http://' + heziIp + ':8080/v1/' + (keycode !== 'setting' ? 'keyevent' : 'action')
+            fetch(url, {
+                body: JSON.stringify({
+                    keycode,
+                    longclick: false
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+                mode: 'no-cors'
+            }).catch(err => {
+                console.log(err)
+            })
+        }
+    </script>
 </body>
 </html>

@@ -1,0 +1,88 @@
+html, body {
+    width: 100%;
+    height: 100%;
+    background: grey;
+    color: #fff;
+}
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+.title {
+    width: 100%;
+    line-height: 50px;
+    text-align: center;
+}
+#off {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    border: 1px solid #666;
+    padding: 10px;
+}
+#ipbtn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    border: 1px solid #666;
+    padding: 10px;
+}
+.arrow-panel {
+    width: 100%;
+    height: 300px;
+    position: relative;
+}
+.arrow-panel>div {
+    width: 50px;
+    height: 50px;
+    background: #444;
+    position: absolute;
+    color: #fff;
+    text-align: center;
+    line-height: 50px;
+}
+.arrow-panel>div:active {
+    background: orange;
+}
+.arrow-panel .up {
+    left: 50%;
+    transform: translateX(-50%);
+    top: 50px;
+}
+.arrow-panel .down {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 50px;
+}
+.arrow-panel .left {
+    top: 50%;
+    transform: translateY(-50%);
+    left: 50px;
+}
+.arrow-panel .right {
+    top: 50%;
+    transform: translateY(-50%);
+    right: 50px;
+}
+.arrow-panel .ok {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.menu-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+.menu-list>div {
+    width: 30%;
+    line-height: 50px;
+    text-align: center;
+    background: #444;
+    color: #fff;
+    margin-top: 50px;
+}
+.menu-list>div:active {
+    background: orange;
+}
