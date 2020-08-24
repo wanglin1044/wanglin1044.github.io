@@ -4,79 +4,182 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        .videobox {
+            width: 100%;
+            margin-top: 100px;
+        }
+        .videobox video {
+            /* width: 40%; */
+        }
+        textarea {
+            margin-top: 30px;
+            width: 40%;
+            height: 200px;
+        }
+        textarea:focus {
+            outline: none;
+        }
+        textarea:hover {
+            outline: none;
+        }
+    </style>
 </head>
 <body>
-    <input type="text" id="username">
-    <button id="connect">连接</button>
-    <button id="stop">断开</button>
-    <button id="getVideo">getVideo</button>
+    <h1 style="text-align: center;">视频聊天室</h1>
+    <h4></h4>
+    <input type="text" placeholder="输入房间名称" id="roomid">
+    <button id="connect">加入</button>
+    <button id="disconnect">断开</button>
+    <button id="getVideo">发起视频聊天</button>
     <br>
+    <textarea readonly name="" id="logs"></textarea>
     <div class="videobox">
-        <!-- <video src="" id="local"></video> -->
-        <!-- <video src="" id="remote"></video> -->
+        <div class="localbox">
+            <p for="">本机视频</p>
+            <video src="" controls id="localVideo"></video>
+        </div>
+        <div class="remotebox">
+            <p for="">对方视频</p>
+            <video src="" controls id="remoteVideo"></video>
+        </div>
     </div>
-    <textarea hidden name="" id="" style="width:400px;height:300px"></textarea>
+    <!-- <textarea hidden name="" id="" style="width:400px;height:300px"></textarea> -->
     <br>
     <input hidden type="text" id="chat">
     <button hidden id="send">发送</button>
     <script>
-        var ta = document.querySelector('textarea')
-        var ws = '', username = '', isConnect = false
+        var $logs = document.querySelector('textarea')
+        var $connect = document.getElementById('connect')
+        var $disconnect = document.getElementById('disconnect')
+        var $getVideo = document.getElementById('getVideo')
+        var ws = '', isConnect = false
+        var roomid = '', user = 0
 
-        function connectWs() {
-            // ws = new WebSocket('ws://127.0.0.1:8001')
-            // ws = new WebSocket('wss://127.0.0.1:8001')
-            ws = new WebSocket('wss://txc.wlin.club:8001')
-            ws.onopen = function(e) {
-                ws.send(JSON.stringify({ id: username, type: 'new' }));
-                // ws.send('hello world');
-                isConnect = true
+        // 初始化
+        function initBtn() {
+            $connect.disabled = false
+            $disconnect.disabled = true
+            $getVideo.disabled = true
+            document.getElementById('localVideo').oncanplay = function() {
+                document.getElementById('localVideo').play()
             }
-            ws.onclose = function(e) {
-                ta.value += '客户端：服务器关闭\n'
-                isConnect = false
-            }
-            ws.onerror = function() {
-                ta.value += '客户端：连接出错\n'
-            }
-            ws.onmessage = function(e) {
-                var res = ''
-                try {
-                    res = JSON.parse(e.data)
-                } catch {
-                    res = e.data
-                }
-                if (res.type === 'offer') recOffer(res.msg)
-                else if (res.type === 'answer') getResponse(res.msg)
-                else if (res.type === 'noOffer') createOffer()
-                else if (res.type === 'hasOffer') {
-                    document.getElementById('getVideo').disabled = true
-                } else if (res.type === 'candidate') {
-                    addIceCandidate(res.msg)
-                }
+            document.getElementById('remoteVideo').oncanplay = function() {
+                document.getElementById('remoteVideo').play()
             }
         }
-
+        // 切换按钮状态
+        function triggerBtn() {
+            // isConnect = state
+            $connect.disabled = false
+            $disconnect.disabled = false
+            $getVideo.disabled = false
+            // if (isConnect) {
+            //     $connect.disabled = true
+            //     $disconnect.disabled = false
+            //     $getVideo.disabled = false
+            // } else {
+            //     $connect.disabled = false
+            //     $disconnect.disabled = true
+            //     $getVideo.disabled = true
+            // }
+        }
+        initBtn()
+        // 更新日志
+        function updateLog(msg, other) { $logs.value += (other ? other : '' + ' ' + msg +'\n') }
+        // 绑定事件
         document.getElementById('connect').onclick = function() {
-            if (ws&&isConnect) return
-            username = document.getElementById('username').value
-            if (username == '') {
+            roomid = document.getElementById('roomid').value
+            if (roomid == '') {
                 alert('不能为空')
                 return
             }
+            triggerBtn(true)
             connectWs()
         }
-        document.getElementById('stop').onclick = closeWS
-        document.getElementById('send').onclick = function() {
-            var value = document.getElementById('chat').value
-            ws.send(JSON.stringify({ id: username, data: value }))
+        document.getElementById('disconnect').onclick = closeWS
+
+        // ws发送消息
+        async function wsSendMessage(roomid, user, type, msg) {
+            msg && typeof msg == Object ? msg = JSON.stringify(msg) : ''
+            await ws.send(JSON.stringify({ roomid: roomid, user: user, type, msg }));
         }
-        window.addEventListener('beforeunload', () => {
-            closeWS()
-        })
+        // 处理消息
+        function handleMessage(res) {
+            switch(res.type) {
+                case 'broadcast': updateLog(res.msg);break;
+                case 'videoInvite': handleVideoInvite(res.msg);break;
+                case 'acceptInvite': acceptInvite(res.msg);break;
+                case 'refuseInvite': refuseInvite(res.msg);break;
+                case 'offer': recOffer(res.msg);break;
+                case 'answer': getResponse(res.msg);break;
+                case 'candidate': addIceCandidate(res.msg);break;
+                case 'noOffer': createOffer();break;
+                case 'hasOffer': document.getElementById('getVideo').disabled = true;break;
+                case 'joinSuccess': joinSuccess(res);break;
+                case 'joinFail': triggerBtn();updateLog(res.msg);break;
+                default: updateLog(res.msg, '对方')
+            }
+        }
+        // 加入房间成功
+        function joinSuccess(res) {
+            user = res.user
+        }
+        // 对方接受视频邀请
+        function acceptInvite(msg) {
+            updateLog('对方接受视频邀请')
+            createOffer()
+        }
+        // 对方拒绝视频邀请
+        function refuseInvite(msg) {
+            updateLog('对方拒绝视频邀请')
+        }
+        // 处理对方发来的视频邀请
+        function handleVideoInvite(msg) {
+            // 可以播放一段铃声
+            updateLog('对方发来视频聊天邀请')
+            if (window.confirm('是否接受视频聊天邀请')) {
+                wsSendMessage(roomid, user, 'acceptInvite', '接受邀请')
+                updateLog('接受视频邀请, 请允许打开摄像头和麦克风')
+            } else {
+                wsSendMessage(roomid, user, 'refuseInvite', '拒绝邀请')
+                updateLog('拒绝视频邀请')
+            }
+        }
+        // 连接websocket
+        function connectWs() {
+            // ws = new WebSocket('ws://127.0.0.1:8001')
+            ws = new WebSocket('wss://txc.wlin.club:8001')
+//             ws = new WebSocket('wss://127.0.0.1:8001')
+            ws.onopen = function(e) {
+                wsSendMessage(roomid, user, 'join', '大家好')
+            }
+            ws.onclose = function(e) {
+                updateLog('连接关闭')
+                triggerBtn()
+            }
+            ws.onerror = function() {
+                updateLog('连接出错')
+                triggerBtn()
+            }
+            ws.onmessage = function(e) {
+                var res = ''
+                try { res = JSON.parse(e.data) }
+                catch { res = e.data }
+                handleMessage(res)
+            }
+        }
+
+        
+        // document.getElementById('send').onclick = function() {
+        //     var value = document.getElementById('chat').value
+        //     ws.send(JSON.stringify({ roomid: roomid, data: value }))
+        // }
+        window.addEventListener('beforeunload', () => { closeWS() })
         function closeWS() {
+            pc && pc.close()
             if (ws) {
-                ws.send(JSON.stringify({ id: username, type: 'leave' }))
+                ws.send(JSON.stringify({ roomid: roomid, user: user, type: 'leave', msg: 'leave room' }))
                 ws.close()
                 ws = ''
             }
@@ -86,11 +189,12 @@
         var localStream, remoteStream
         var remoteTimes = 0
         function createVideoElement(stream, id) {
-            var vid = document.createElement("video");
-            vid.setAttribute('id', id || 'localVideo')
-            vid.controls = true
-            vid.oncanplay = () => { vid.play() }
-            document.body.appendChild(vid);
+            // var vid = document.createElement("video");
+            // vid.setAttribute('id', id || 'localVideo')
+            // vid.controls = true
+            // vid.oncanplay = () => { vid.play() }
+            // document.body.appendChild(vid);
+            var vid = document.getElementById(id || 'localVideo')
             vid.srcObject = stream;
         }
 
@@ -123,10 +227,12 @@
         function error(err) { endCall(); }
 
         document.getElementById('getVideo').onclick = async function() {
-            ws.send(JSON.stringify({ id: username, type: 'query' }));
+            updateLog('向对方发出视频聊天邀请')
+            ws.send(JSON.stringify({ roomid: roomid, user, type: 'videoInvite', msg: '对方邀请您视频聊天' }));
         }
         // 发起请求
         function createOffer() {
+            updateLog('打开本地摄像头')
             navigator.getUserMedia({ video: true, audio: true }, function(stream) {
                 localStream = stream
                 createVideoElement(stream)
@@ -136,10 +242,13 @@
                 // pc.addStream(stream);
                 pc.createOffer(function(offer) {
                     pc.setLocalDescription(new RTCSessionDescription(offer), function() {
-                        ws.send(JSON.stringify({ id: username, type: 'offer', msg: JSON.stringify(offer) }));
+                        ws.send(JSON.stringify({ roomid: roomid, user, type: 'offer', msg: JSON.stringify(offer) }));
                     }, error)
                 }, error)
-            }, error)
+            }, function(error) {
+                // updateLog(JSON.stringify(error))
+                wsSendMessage(roomid, user, 'other', JSON.stringify(error))
+            })
         }
         // 收到请求
         function recOffer(offer) {
@@ -157,7 +266,7 @@
                 pc.setRemoteDescription(new RTCSessionDescription(offer), function() {
                     pc.createAnswer(function(answer) {
                         pc.setLocalDescription(new RTCSessionDescription(answer), function() {
-                            ws.send(JSON.stringify({ id: username, type: 'answer', msg: JSON.stringify(answer) }));
+                            ws.send(JSON.stringify({ roomid: roomid, user, type: 'answer', msg: JSON.stringify(answer) }));
                         }, error);
                     }, error);
                 }, error);
@@ -175,7 +284,7 @@
             console.log('onIceCandidate')
             try {
                 if (event.candidate) {
-                    ws.send(JSON.stringify({ id: username, type: 'candidate', msg: JSON.stringify(event.candidate) }));
+                    ws.send(JSON.stringify({ roomid: roomid, user, type: 'candidate', msg: JSON.stringify(event.candidate) }));
                 }
                 // await (getOtherPc(pc).addIceCandidate(event.candidate));
             } catch (e) {
@@ -194,10 +303,6 @@
                 console.log(`${pc} ICE state: ${pc.iceConnectionState}`);
                 console.log('ICE state change event: ', event);
             }
-        }
-
-        async function wsSendMessage(username, type, msg) {
-            ws.send(JSON.stringify({ id: username, type, msg: JSON.stringify(msg) }));
         }
     </script>
 </body>
