@@ -25,9 +25,11 @@
 
         function connectWs() {
             // ws = new WebSocket('ws://127.0.0.1:8001')
-            ws = new WebSocket('ws://62.234.119.89:8001')
+            // ws = new WebSocket('wss://127.0.0.1:8888')
+            ws = new WebSocket('wss://txc.wlin.club:8001')
             ws.onopen = function(e) {
                 ws.send(JSON.stringify({ id: username, type: 'new' }));
+                // ws.send('hello world');
                 isConnect = true
             }
             ws.onclose = function(e) {
@@ -38,14 +40,12 @@
                 ta.value += '客户端：连接出错\n'
             }
             ws.onmessage = function(e) {
-                
                 var res = ''
                 try {
                     res = JSON.parse(e.data)
                 } catch {
                     res = e.data
                 }
-                console.log(res)
                 if (res.type === 'offer') recOffer(res.msg)
                 else if (res.type === 'answer') getResponse(res.msg)
                 else if (res.type === 'noOffer') createOffer()
@@ -79,8 +79,9 @@
 
         var localStream, remoteStream
         var remoteTimes = 0
-        function createVideoElement(stream) {
+        function createVideoElement(stream, id) {
             var vid = document.createElement("video");
+            vid.setAttribute('id', id || 'localVideo')
             vid.controls = true
             vid.oncanplay = () => { vid.play() }
             document.body.appendChild(vid);
@@ -91,15 +92,16 @@
         pc.onaddstream = function(e) {
             console.log('addStream', e)
             // document.querySelector('video').srcObject = e.streams[0]
+            if (e && e.streams[0]) document.getElementById('remoteVideo').srcObject = e.streams[0]
         }
         pc.ontrack = function(e) {
             console.log('ontrack', e)
             remoteStream = e.streams
             if (remoteTimes == 0) {
-                createVideoElement(e.streams[0])
+                createVideoElement(e.streams[0], 'remoteVideo')
                 remoteTimes++
             } else {
-                document.querySelector('video').srcObject = e.streams[0]
+                document.getElementById('remoteVideo').srcObject = e.streams[0]
             }
         }
         // Helper functions
@@ -134,9 +136,12 @@
             console.log('recoffer', typeof offer)
             offer = JSON.parse(offer)
             document.getElementById('getVideo').disabled = true
-            // navigator.getUserMedia({ video: true, audio: true }, function(stream) {
-            //     pc.onaddstream({ stream });
-            //     pc.addStream(stream);
+            navigator.getUserMedia({ video: true, audio: true }, function(stream) {
+                // pc.onaddstream({ stream });
+                localStream = stream
+                createVideoElement(stream)
+                pc.onaddstream();
+                pc.addStream(stream);
                 pc.setRemoteDescription(new RTCSessionDescription(offer), function() {
                     pc.createAnswer(function(answer) {
                         pc.setLocalDescription(new RTCSessionDescription(answer), function() {
@@ -144,7 +149,7 @@
                         }, error);
                     }, error);
                 }, error);
-            // }, error)
+            }, error)
         }
         // 收到回复
         function getResponse(answer) {
