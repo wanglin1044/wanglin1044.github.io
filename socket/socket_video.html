@@ -25,7 +25,7 @@
 
         function connectWs() {
             // ws = new WebSocket('ws://127.0.0.1:8001')
-            // ws = new WebSocket('wss://127.0.0.1:8888')
+            // ws = new WebSocket('wss://127.0.0.1:8001')
             ws = new WebSocket('wss://txc.wlin.club:8001')
             ws.onopen = function(e) {
                 ws.send(JSON.stringify({ id: username, type: 'new' }));
@@ -51,6 +51,8 @@
                 else if (res.type === 'noOffer') createOffer()
                 else if (res.type === 'hasOffer') {
                     document.getElementById('getVideo').disabled = true
+                } else if (res.type === 'candidate') {
+                    addIceCandidate(res.msg)
                 }
             }
         }
@@ -58,6 +60,10 @@
         document.getElementById('connect').onclick = function() {
             if (ws&&isConnect) return
             username = document.getElementById('username').value
+            if (username == '') {
+                alert('不能为空')
+                return
+            }
             connectWs()
         }
         document.getElementById('stop').onclick = closeWS
@@ -89,10 +95,12 @@
         }
 
         var pc = new RTCPeerConnection();  // local
+        pc.addEventListener('icecandidate', e => onIceCandidate(pc, e));
+        pc.addEventListener('iceconnectionstatechange', e => onIceStateChange(pc, e));
         pc.onaddstream = function(e) {
             console.log('addStream', e)
             // document.querySelector('video').srcObject = e.streams[0]
-            if (e && e.streams[0]) document.getElementById('remoteVideo').srcObject = e.streams[0]
+            // if (e && e.streams[0]) document.getElementById('remoteVideo').srcObject = e.streams[0]
         }
         pc.ontrack = function(e) {
             console.log('ontrack', e)
@@ -122,8 +130,10 @@
             navigator.getUserMedia({ video: true, audio: true }, function(stream) {
                 localStream = stream
                 createVideoElement(stream)
-                pc.onaddstream();
-                pc.addStream(stream);
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                console.log('add track to pc')
+                // pc.onaddstream();
+                // pc.addStream(stream);
                 pc.createOffer(function(offer) {
                     pc.setLocalDescription(new RTCSessionDescription(offer), function() {
                         ws.send(JSON.stringify({ id: username, type: 'offer', msg: JSON.stringify(offer) }));
@@ -140,8 +150,10 @@
                 // pc.onaddstream({ stream });
                 localStream = stream
                 createVideoElement(stream)
-                pc.onaddstream();
-                pc.addStream(stream);
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                console.log('add track to pc')
+                // pc.onaddstream();
+                // pc.addStream(stream);
                 pc.setRemoteDescription(new RTCSessionDescription(offer), function() {
                     pc.createAnswer(function(answer) {
                         pc.setLocalDescription(new RTCSessionDescription(answer), function() {
@@ -156,8 +168,36 @@
             console.log('recAnswer', typeof answer)
             answer = JSON.parse(answer)
             pc.setRemoteDescription(new RTCSessionDescription(answer), function() {
-
             }, error);
+        }
+
+        async function onIceCandidate(pc, event) {
+            console.log('onIceCandidate')
+            try {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({ id: username, type: 'candidate', msg: JSON.stringify(event.candidate) }));
+                }
+                // await (getOtherPc(pc).addIceCandidate(event.candidate));
+            } catch (e) {
+                onAddIceCandidateError(pc, e);
+            }
+        }
+
+        // addIceCandidate
+        async function addIceCandidate(candidate) {
+            console.log('reciver candidate and add')
+            candidate = JSON.parse(candidate)
+            await pc.addIceCandidate(candidate)
+        }
+        function onIceStateChange(pc, event) {
+            if (pc) {
+                console.log(`${pc} ICE state: ${pc.iceConnectionState}`);
+                console.log('ICE state change event: ', event);
+            }
+        }
+
+        async function wsSendMessage(username, type, msg) {
+            ws.send(JSON.stringify({ id: username, type, msg: JSON.stringify(msg) }));
         }
     </script>
 </body>
