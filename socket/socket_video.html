@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <input type="text" id="username">
+    <button id="connect">连接</button>
+    <button id="stop">断开</button>
+    <button id="getVideo">getVideo</button>
+    <br>
+    <div class="videobox">
+        <!-- <video src="" id="local"></video> -->
+        <!-- <video src="" id="remote"></video> -->
+    </div>
+    <textarea hidden name="" id="" style="width:400px;height:300px"></textarea>
+    <br>
+    <input hidden type="text" id="chat">
+    <button hidden id="send">发送</button>
+    <script>
+        var ta = document.querySelector('textarea')
+        var ws = '', username = '', isConnect = false
+
+        function connectWs() {
+            // ws = new WebSocket('ws://127.0.0.1:8001')
+            ws = new WebSocket('ws://62.234.119.89:8001')
+            ws.onopen = function(e) {
+                ws.send(JSON.stringify({ id: username, type: 'new' }));
+                isConnect = true
+            }
+            ws.onclose = function(e) {
+                ta.value += '客户端：服务器关闭\n'
+                isConnect = false
+            }
+            ws.onerror = function() {
+                ta.value += '客户端：连接出错\n'
+            }
+            ws.onmessage = function(e) {
+                
+                var res = ''
+                try {
+                    res = JSON.parse(e.data)
+                } catch {
+                    res = e.data
+                }
+                console.log(res)
+                if (res.type === 'offer') recOffer(res.msg)
+                else if (res.type === 'answer') getResponse(res.msg)
+                else if (res.type === 'noOffer') createOffer()
+                else if (res.type === 'hasOffer') {
+                    document.getElementById('getVideo').disabled = true
+                }
+            }
+        }
+
+        document.getElementById('connect').onclick = function() {
+            if (ws&&isConnect) return
+            username = document.getElementById('username').value
+            connectWs()
+        }
+        document.getElementById('stop').onclick = closeWS
+        document.getElementById('send').onclick = function() {
+            var value = document.getElementById('chat').value
+            ws.send(JSON.stringify({ id: username, data: value }))
+        }
+        window.addEventListener('beforeunload', () => {
+            closeWS()
+        })
+        function closeWS() {
+            if (ws) {
+                ws.send(JSON.stringify({ id: username, type: 'leave' }))
+                ws.close()
+                ws = ''
+            }
+        }
+
+
+        var localStream, remoteStream
+        var remoteTimes = 0
+        function createVideoElement(stream) {
+            var vid = document.createElement("video");
+            vid.controls = true
+            vid.oncanplay = () => { vid.play() }
+            document.body.appendChild(vid);
+            vid.srcObject = stream;
+        }
+
+        var pc = new RTCPeerConnection();  // local
+        pc.onaddstream = function(e) {
+            console.log('addStream', e)
+            // document.querySelector('video').srcObject = e.streams[0]
+        }
+        pc.ontrack = function(e) {
+            console.log('ontrack', e)
+            remoteStream = e.streams
+            if (remoteTimes == 0) {
+                createVideoElement(e.streams[0])
+                remoteTimes++
+            } else {
+                document.querySelector('video').srcObject = e.streams[0]
+            }
+        }
+        // Helper functions
+        function endCall() {
+            var videos = document.getElementsByTagName("video");
+            for (var i = 0; i < videos.length; i++) {
+                videos[i].pause();
+            }
+            pc.close();
+        }
+        function error(err) { endCall(); }
+
+        document.getElementById('getVideo').onclick = async function() {
+            ws.send(JSON.stringify({ id: username, type: 'query' }));
+        }
+        // 发起请求
+        function createOffer() {
+            navigator.getUserMedia({ video: true, audio: true }, function(stream) {
+                localStream = stream
+                createVideoElement(stream)
+                pc.onaddstream();
+                pc.addStream(stream);
+                pc.createOffer(function(offer) {
+                    pc.setLocalDescription(new RTCSessionDescription(offer), function() {
+                        ws.send(JSON.stringify({ id: username, type: 'offer', msg: JSON.stringify(offer) }));
+                    }, error)
+                }, error)
+            }, error)
+        }
+        // 收到请求
+        function recOffer(offer) {
+            console.log('recoffer', typeof offer)
+            offer = JSON.parse(offer)
+            document.getElementById('getVideo').disabled = true
+            // navigator.getUserMedia({ video: true, audio: true }, function(stream) {
+            //     pc.onaddstream({ stream });
+            //     pc.addStream(stream);
+                pc.setRemoteDescription(new RTCSessionDescription(offer), function() {
+                    pc.createAnswer(function(answer) {
+                        pc.setLocalDescription(new RTCSessionDescription(answer), function() {
+                            ws.send(JSON.stringify({ id: username, type: 'answer', msg: JSON.stringify(answer) }));
+                        }, error);
+                    }, error);
+                }, error);
+            // }, error)
+        }
+        // 收到回复
+        function getResponse(answer) {
+            console.log('recAnswer', typeof answer)
+            answer = JSON.parse(answer)
+            pc.setRemoteDescription(new RTCSessionDescription(answer), function() {
+
+            }, error);
+        }
+    </script>
+</body>
+</html>
