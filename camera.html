@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <video src="" id="video"></video>
+  <canvas id="canvas" ></canvas>
+  <button id="fbtn">前置摄像头·</button>
+  <button id="bbtn">后置摄像头·</button>
+  <button id="psuse">pause video</button>
+  <button id="stop">stop video</button>
+  <script>
+
+    var backDeviceId = ''
+    var liveStream = ''
+    navigator.mediaDevices.enumerateDevices().then(devices => {
+      console.log(devices)
+      var arr = []
+      devices.forEach(d => {
+        if (d.kind === 'videoinput') {
+          arr.push(d)
+        }
+      })
+      if (arr.length >= 2) {
+        backDeviceId = arr[1].deviceId
+      } if (arr.length === 0) {
+        alert('当前设备没有摄像头')
+      }
+    })
+    var $ = id => document.getElementById(id)
+    var video = $('video');
+    var timer
+    $('fbtn').onclick = () => {
+      getCamera('front')
+    }
+    $('bbtn').onclick = () => {
+      getCamera('back')
+    }
+    $('psuse').onclick = () => {
+      video.pause()
+    }
+    $('stop').onclick = () => {
+      stopStream()
+    }
+
+    function getCamera(dire) {
+      stopStream()
+      let constraints
+      if (dire === 'front') {
+        constraints = { video: true };
+      } else {
+        constraints = { video: {
+          facingMode: 'environment',
+          deviceId: backDeviceId
+          }
+        }
+      }
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+          liveStream = stream
+          clearTimeout(timer)
+          video.srcObject = stream;
+          video.onloadedmetadata = function(e) {
+            video.play();
+          }
+        }).catch(err => {
+          alert(JSON.stringify(err) + 'err')
+          console.log(err)
+        })
+      }
+    }
+    function errBack(e) {
+      alert('error')
+    }
+
+    function stopStream() {
+      clearTimeout(timer)
+      if (liveStream) {
+        liveStream.getTracks()[0].stop()
+      }
+    }
+
+    $('video').onplay = function() {
+      init()
+    }
+    $('video').onended = function() {
+      clearTimeout(timer)
+    }
+    $('video').onpause = function() {
+      clearTimeout(timer)
+    }
+    
+    var vCanvas = document.createElement('canvas')
+    var vCtx = vCanvas.getContext('2d', { alpha: false })
+    var canvas = $('canvas')
+    var ctx = canvas.getContext('2d', { alpha: false })
+    var width, height
+    var fontSize = 8, samplerStep = fontSize
+
+    var init = function () {
+      width = $('video').videoWidth
+      height = $('video').videoHeight
+      canvas.width = vCanvas.width = width
+      canvas.height = vCanvas.height = height
+      render()
+    }
+
+    var x, y, dx, dy, pos
+    var asciiCharArray = '#KDGLftji+;,: '.split('')
+    var durationPerChar = Math.ceil(255 / asciiCharArray.length)
+
+    function render () {
+      vCtx.drawImage($('video'), 0, 0, width, height)
+      var imageData = vCtx.getImageData(0, 0, width, height)
+      var data = imageData.data
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, width, height)
+      ctx.fillStyle = '#000000'
+      ctx.font = fontSize + 'px SimHei'
+      for (y = 0, dy = 0; y < height; y += samplerStep, dy++) {
+        for (x = 0, dx = 0; x < width; x += samplerStep, dx++) {
+          pos = y * width + x
+          var average = data[pos * 4] * 0.3086 + data[pos * 4 + 1] * 0.6094 + data[pos * 4 + 2] * 0.0820
+          data[pos * 4] = data[pos * 4 + 1] = data[pos * 4 + 2] = average
+          var [part1, part2] = [Math.floor(average / durationPerChar), average % durationPerChar]
+          var letter = part2 ? asciiCharArray[part1] : (part1 ? asciiCharArray[part1 - 1] : 'æ')
+          ctx.fillText(letter, dx * fontSize, (dy + 1) * fontSize)
+        }
+      }
+      timer = setTimeout(() => {
+        render()
+      }, 40)
+    }
+  </script>
+</body>
+</html>
