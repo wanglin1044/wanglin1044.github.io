@@ -27,6 +27,7 @@
 </head>
 <body>
     <h1 style="text-align: center;">视频聊天室</h1>
+    <h3>输入同样的房间即可进行视频聊天</h3>
     <h4></h4>
     <input type="text" placeholder="输入房间名称" id="roomid">
     <button id="connect">加入</button>
@@ -150,7 +151,7 @@
         function connectWs() {
             // ws = new WebSocket('ws://127.0.0.1:8001')
             ws = new WebSocket('wss://txc.wlin.club:8001')
-//             ws = new WebSocket('wss://127.0.0.1:8001')
+            // ws = new WebSocket('wss://127.0.0.1:8001')
             ws.onopen = function(e) {
                 wsSendMessage(roomid, user, 'join', '大家好')
             }
@@ -294,9 +295,15 @@
 
         // addIceCandidate
         async function addIceCandidate(candidate) {
-            console.log('reciver candidate and add')
-            candidate = JSON.parse(candidate)
-            await pc.addIceCandidate(candidate)
+            var rtcIceCandidate
+            try {
+                candidate = JSON.parse(candidate)
+                rtcIceCandidate = new RTCIceCandidate(candidate)
+                await pc.addIceCandidate(rtcIceCandidate)
+            }
+            catch { }
+            console.log('reciver candidate and add', candidate, rtcIceCandidate)
+            updateLog('address:' + rtcIceCandidate.address)
         }
         function onIceStateChange(pc, event) {
             if (pc) {
