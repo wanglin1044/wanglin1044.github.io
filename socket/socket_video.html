@@ -150,8 +150,8 @@
         // 连接websocket
         function connectWs() {
             // ws = new WebSocket('ws://127.0.0.1:8001')
-            ws = new WebSocket('wss://txc.wlin.club:8001')
-            // ws = new WebSocket('wss://127.0.0.1:8001')
+            // ws = new WebSocket('wss://txc.wlin.club:8001')
+            ws = new WebSocket('wss://127.0.0.1:8001')
             ws.onopen = function(e) {
                 wsSendMessage(roomid, user, 'join', '大家好')
             }
@@ -187,6 +187,14 @@
         }
 
 
+
+        let serverConfig = {
+            "iceServers": [
+                {
+                    "urls": ["stun:stun.l.google.com:19302"]
+                }
+            ]
+        };
         var localStream, remoteStream
         var remoteTimes = 0
         function createVideoElement(stream, id) {
@@ -199,7 +207,7 @@
             vid.srcObject = stream;
         }
 
-        var pc = new RTCPeerConnection();  // local
+        var pc = new RTCPeerConnection(serverConfig);  // local
         pc.addEventListener('icecandidate', e => onIceCandidate(pc, e));
         pc.addEventListener('iceconnectionstatechange', e => onIceStateChange(pc, e));
         pc.onaddstream = function(e) {
@@ -303,7 +311,7 @@
             }
             catch { }
             console.log('reciver candidate and add', candidate, rtcIceCandidate)
-            updateLog('address:' + rtcIceCandidate.address)
+            updateLog('对方address:' + rtcIceCandidate.address)
         }
         function onIceStateChange(pc, event) {
             if (pc) {
