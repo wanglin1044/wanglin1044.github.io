@@ -150,8 +150,8 @@
         // 连接websocket
         function connectWs() {
             // ws = new WebSocket('ws://127.0.0.1:8001')
-            // ws = new WebSocket('wss://txc.wlin.club:8001')
-            ws = new WebSocket('wss://127.0.0.1:8001')
+            ws = new WebSocket('wss://txc.wlin.club:8001')
+            // ws = new WebSocket('wss://127.0.0.1:8001')
             ws.onopen = function(e) {
                 wsSendMessage(roomid, user, 'join', '大家好')
             }
