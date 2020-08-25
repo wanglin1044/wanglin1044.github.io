@@ -295,6 +295,7 @@
             try {
                 if (event.candidate) {
                     ws.send(JSON.stringify({ roomid: roomid, user, type: 'candidate', msg: JSON.stringify(event.candidate) }));
+                    updateLog('本机address:' + event.candidate.address)
                 }
                 // await (getOtherPc(pc).addIceCandidate(event.candidate));
             } catch (e) {
