@@ -29,7 +29,7 @@
     #video {
       /* width: 100%;
       height: 300px; */
-      background-color: #0f0;
+      background-color: rgb(163, 219, 163);
     }
     /* 拍照按钮 */
     .pz-icon {
@@ -77,7 +77,7 @@
 <body>
   <div class="full">
     <div style="width: 100%;height: 100%;">
-      <video src="" id="video" style="width: 100%;height: 100%;"></video>
+      <video src="" id="video" style="width: 100%;height: 100%;" playsinline="true" webkit-playsinline="true"></video>
     </div>
     <!-- <div class="btn-list">
       <button class="btn" id="closeBtn">关闭摄像头</button><br>
@@ -87,7 +87,7 @@
       <button class="btn" id="paizhao" style="display: block;">拍照</button>
     </div>
     <div class="img-list">
-      <img src="http://127.0.0.1/image/111.jpg" alt="">
+<!--       <img src="http://127.0.0.1/image/111.jpg" alt=""> -->
     </div>
     <div class="big-img">
       <img src="" alt="" style="width:100%;height:auto;">
@@ -105,6 +105,27 @@
     video.oncanplay = () => {
 //       video.play()
       console.log(video.videoWidth, video.videoHeight)
+      if (typeof WeixinJSBrdgeReady == "object" && typeof WeixinJSBridge.invoke == "function") {
+        video.play()
+        console.log('had play')
+      } else {
+        if (document.addEventListener) {
+          document.addEventListener("WeixinJSBridgeReady", function () {
+            console.log('had haeve 2')
+            WeixinJSBridge.invoke('getNetworkType', {}, function (e) {
+              console.log('had haeve 5')
+              video.play()
+            })
+            }, false);
+        } else if (document.attachEvent) {
+          document.attachEvent("WeixinJSBridgeReady", function () {
+            console.log('had haeve 3')
+          });
+          document.attachEvent("onWeixinJSBridgeReady", function () {
+            console.log('had haeve 4')
+          });
+        }
+      }
     }
 
     async function openCamera() {
@@ -136,10 +157,10 @@
       }
     }
 
-    var cameraInit = false
+//     var cameraInit = false
     document.getElementById('paizhao').onclick = function() {
-      video.play()
-      return
+//       video.play()
+//       return
 //       if (!cameraInit) {
 //         cameraInit = true
 //         openCamera()
