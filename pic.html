@@ -103,7 +103,7 @@
 
     const video = document.getElementById('video')
     video.oncanplay = () => {
-//       video.play()
+      video.play()
       console.log(video.videoWidth, video.videoHeight)
       if (typeof WeixinJSBrdgeReady == "object" && typeof WeixinJSBridge.invoke == "function") {
         video.play()
