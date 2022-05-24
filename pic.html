@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>三维拍拍</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    div, video, canvas, img {
+      margin: 0;
+      padding: 0;
+    }
+    .btn {
+      /* margin-bottom: 10px;
+      margin-left: 10px; */
+      font-size: 18px;
+    }
+    /* 全屏 */
+    .full {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    #video {
+      /* width: 100%;
+      height: 300px; */
+      background-color: #000;
+    }
+    /* 拍照按钮 */
+    .pz-icon {
+      position: absolute;
+      margin: 0 auto;
+      width: 100px;
+      height: 100px;
+      left: 0;
+      right: 0;
+      bottom: 100px;
+      border-radius: 50%;
+      background:rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 图片列表 */
+    .img-list {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      bottom: 20px;
+      height: 60px;
+      display: flex;
+      white-space: nowrap;
+      overflow: auto;
+    }
+    .img-list img {
+      width: 60px;
+      height: 60px;
+      margin-right: 10px;
+      background-color: #fff;
+    }
+    .big-img {
+      display: none;
+      position: fixed;
+      top: 0;left: 0;right: 0;bottom: 0;
+      background: rgb(0, 0, 0);
+      /* display: flex; */
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="full">
+    <div style="width: 100%;height: 100%;">
+      <video src="" id="video" style="width: 100%;height: 100%;"></video>
+    </div>
+    <!-- <div class="btn-list">
+      <button class="btn" id="closeBtn">关闭摄像头</button><br>
+      <button class="btn" id="paizhao">拍照</button>
+    </div> -->
+    <div class="pz-icon">
+      <button class="btn" id="paizhao" style="display: block;">拍照</button>
+    </div>
+    <div class="img-list">
+      <img src="http://127.0.0.1/image/111.jpg" alt="">
+    </div>
+    <div class="big-img">
+      <img src="" alt="" style="width:100%;height:auto;">
+    </div>
+  </div>
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/vConsole/3.14.6/vconsole.min.js"></script>
+  <script>
+    var vConsole = new VConsole(); // init vConsole
+
+    var canvas, ctx;
+    var videoStream = null
+
+    const video = document.getElementById('video')
+    video.oncanplay = () => {
+      video.play()
+      console.log(video.videoWidth, video.videoHeight)
+    }
+
+    async function openCamera() {
+      try {
+        videoStream = await window.navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+        console.log('videoStream', videoStream)
+        video.srcObject = videoStream
+      } catch (e) {
+        console.log(e)
+        alert('打开摄像头失败')
+      }
+      // 监听退出 || 关闭页面
+      // 成功 和 拒绝失败分别要写
+      // 获取到相机的分辨率 480*640
+      // var devices = await window.navigator.mediaDevices.enumerateDevices()
+      // devices.forEach(function(device) {
+      //   console.log(device.kind + ": " + device.label + " id = " + device.deviceId);
+      // });
+    }
+    // openCamera()
+
+    // document.getElementById('closeBtn').onclick = async function() {
+    // }
+    function stopVideo() {
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop())
+        video.srcObject = null
+        videoStream = null
+      }
+    }
+
+    var cameraInit = false
+    document.getElementById('paizhao').onclick = function() {
+      if (!cameraInit) {
+        cameraInit = true
+        openCamera()
+        return
+      }
+      if (!canvas) createCanvas()
+      ctx.clearRect(0,0,canvas.width,canvas.height)
+      ctx.drawImage(video, 0, 0)
+      var dataUrl = canvas.toDataURL('image/png', 0.75)
+      console.log(dataUrl.length)
+      var img = document.createElement('img')
+      img.src = dataUrl
+      document.getElementsByClassName('img-list')[0].appendChild(img)
+    }
+
+    function createCanvas() {
+      canvas = document.createElement('canvas')
+      ctx = canvas.getContext('2d')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+    }
+
+    document.getElementsByClassName('img-list')[0].onclick = function(e) {
+      let tagName = e.target.tagName.toLocaleLowerCase()
+      if (tagName === 'img') {
+        bigImg(e.target.src)
+        // console.log(e.target.src)
+      }
+    }
+    function bigImg(src = '') {
+      if (!src) return
+      var bigImgEl = document.getElementsByClassName('big-img')[0]
+      bigImgEl.getElementsByTagName('img')[0].src = src
+      bigImgEl.style.display = 'flex'
+    }
+    document.getElementsByClassName('big-img')[0].onclick = function() {
+      this.style.display = 'none'
+    }
+  </script>
+</body>
+</html>
