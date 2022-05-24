@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>三维拍拍</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+    div, video, canvas, img {
+      margin: 0;
+      padding: 0;
+    }
+    .btn {
+      margin-bottom: 10px;
+      margin-left: 10px;
+      font-size: 18px;
+    }
+    /* 全屏 */
+    .full, .div1 {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    .div1 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+  </style>
+</head>
+<body>
+  <div class="div1">
+    <div class="btn"><a href="javascript:;" onclick="jump('pic.html')">小物件模型</a></div>
+    <div class="btn"><a href="javascript:;" onclick="jump('video.html')">视频模型</a></div>
+  </div>
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/vConsole/3.14.6/vconsole.min.js"></script>
+  <script>
+    var vConsole = new VConsole(); // init vConsole
+    // 拍照: 需要 mediaDevices.getUserMedia
+    // 视频: 需要 mediaDevices.getUserMedia MediaRecorder
+
+    var videoStream = null
+
+    let isSupportMedia = false, isSupportRecord = false
+
+    function testMediaDevices() {
+      // 测试是否支持调用摄像头
+      if (navigator.mediaDevices) {
+        console.log('支持 mediaDevices')
+        console.log((navigator.mediaDevices.getUserMedia ? '支持' : '不支持') + 'getUserMedia')
+        isSupportMedia = true
+      } else {
+        console.log('不支持 mediaDevices')
+      }
+      if (window.MediaRecorder) {
+        isSupportRecord = true
+        console.log('支持 MediaRecorder')
+        testSupport()
+      } else {
+        console.log('不支持 MediaRecorder')
+      }
+    }
+    testMediaDevices()
+
+    // 测试是否支持 video/audio 编码
+    function testSupport() {
+      var types = ["video/webm","audio/webm","video/webm\;codecs=vp8","video/webm\;codecs=vp9","video/webm\;codecs=h264","audio/webm\;codecs=opus","video/mpeg"];
+      for (let key of types) {
+        console.log(key + (MediaRecorder.isTypeSupported(key) ? " 支持" : " 不支持"));
+      }
+    }
+
+    async function jump(page) {
+      if (!isSupportMedia) {
+        alert('不支持')
+      } else {
+        try {
+          await window.navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+          window.location.href = page
+        } catch (e) {
+          console.log(e)
+          alert('打开摄像头失败')
+        }
+      }
+    }
+  </script>
+</body>
+</html>
